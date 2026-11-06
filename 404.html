@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OLD GROWTH</title>
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <style>
+    :root { --bg: #f4f1ea; --ink: #2f3a2c; --mute: rgba(47, 58, 44, .55); --rule: rgba(47, 58, 44, .25); }
+    @media (prefers-color-scheme: dark) { :root { --bg: #161a15; --ink: #e6e2d6; --mute: rgba(230, 226, 214, .55); --rule: rgba(230, 226, 214, .25); } }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px 16px;
+      background: var(--bg); color: var(--ink);
+      font: 17px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased;
+    }
+    main { width: min(100%, 22rem); }
+    h1 { font: 400 clamp(40px, 11vw, 64px)/.95 ui-serif, Georgia, serif; letter-spacing: -.03em; margin: 0 0 12px; }
+    p { margin: 0 0 32px; color: var(--mute); }
+    form { display: grid; gap: 14px; }
+    input {
+      font: inherit; font-size: 22px; letter-spacing: .04em; color: var(--ink);
+      background: none; border: 0; border-bottom: 1px solid var(--rule); border-radius: 0;
+      padding: 6px 0 8px; outline: none; width: 100%;
+    }
+    input:focus { border-bottom-color: var(--ink); }
+    button {
+      justify-self: start; font: inherit; cursor: pointer;
+      color: var(--bg); background: var(--ink); border: 1px solid var(--ink); border-radius: 999px; padding: 9px 20px 10px;
+    }
+    button:disabled { opacity: .5; cursor: progress; }
+    .error { margin: 0; color: var(--ink); font-size: 15px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>OLD GROWTH</h1>
+    <p>Not public yet. If Levin gave you the password, enter it here.</p>
+    <form data-gate autocomplete="on">
+      <input type="text" name="username" value="oldgrowth" autocomplete="username" hidden>
+      <input type="password" name="password" aria-label="Password" placeholder="Password" autocomplete="current-password" required autofocus>
+      <button type="submit">Enter</button>
+      <p class="error" data-error hidden>That's not it.</p>
+      <p class="error" data-unsupported hidden>This browser can't open the site. Try a recent Safari, Chrome or Firefox.</p>
+    </form>
+  </main>
+  <script src="/gate.js"></script>
+</body>
+</html>
