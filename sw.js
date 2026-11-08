@@ -24,19 +24,24 @@ function keyStore(mode, op) {
     open.onsuccess = () => {
       const tx = open.result.transaction('keys', mode);
       const req = op(tx.objectStore('keys'));
-      tx.oncomplete = () => { open.result.close(); resolve(req.result); };
+      tx.oncomplete = () => { open.result.close(); resolve(req?.result); };
       tx.onerror = () => reject(tx.error);
     };
   });
 }
 
+// the key's bytes (gate.js); a device let in before 8 Nov 2026 has a CryptoKey
+// under 'site' instead, which works everywhere but Safari
 async function getKey() {
-  return (key ||= await keyStore('readonly', (s) => s.get('site')).catch(() => null));
+  if (key) return key;
+  const raw = await keyStore('readonly', (s) => s.get('raw')).catch(() => null);
+  if (raw) return (key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']));
+  return (key = await keyStore('readonly', (s) => s.get('site')).catch(() => null));
 }
 
 async function forget() {
   key = null;
-  await keyStore('readwrite', (s) => s.delete('site')).catch(() => {});
+  await keyStore('readwrite', (s) => { s.delete('site'); s.delete('raw'); }).catch(() => {});
 }
 
 // the same name lock_site.mjs gave the file: sha256(salt + path), first 32 hex digits

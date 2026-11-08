@@ -1,7 +1,8 @@
 // The password page. The password never leaves the browser: it is turned into
-// the AES key here, checked against lock/meta.json, and the key (stored
-// non-extractable, so it can't be read back out) is kept in IndexedDB for
-// the service worker, which decrypts the site's files.
+// the AES key here, checked against lock/meta.json, and the key's bytes are
+// kept in IndexedDB for the service worker, which decrypts the site's files.
+// (Bytes, not a CryptoKey object: Safari, on the iPhone above all, can't hand
+// a stored CryptoKey to a service worker, so the site never opened there.)
 
 const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const form = document.querySelector('[data-gate]');
@@ -15,7 +16,7 @@ function keyStore(mode, op) {
     open.onsuccess = () => {
       const tx = open.result.transaction('keys', mode);
       const req = op(tx.objectStore('keys'));
-      tx.oncomplete = () => { open.result.close(); resolve(req.result); };
+      tx.oncomplete = () => { open.result.close(); resolve(req?.result); };
       tx.onerror = () => reject(tx.error);
     };
   });
@@ -23,11 +24,12 @@ function keyStore(mode, op) {
 
 async function unlock(password) {
   const meta = await (await fetch('/lock/meta.json', { cache: 'no-cache' })).json();
-  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: unb64(meta.salt), iterations: meta.iterations, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unb64(meta.salt), iterations: meta.iterations, hash: 'SHA-256' }, base, 256));
+  const key = await crypto.subtle.importKey('raw', bits, 'AES-GCM', false, ['decrypt']);
   const check = unb64(meta.check);
   await crypto.subtle.decrypt({ name: 'AES-GCM', iv: check.slice(0, 12) }, key, check.slice(12)); // throws if wrong
-  return key;
+  return bits;
 }
 
 if (!('serviceWorker' in navigator) || !window.crypto?.subtle || !window.indexedDB) {
@@ -44,10 +46,12 @@ if (!('serviceWorker' in navigator) || !window.crypto?.subtle || !window.indexed
     // each wrong guess makes the next one wait longer (1, 2, 4, 8 s)
     if (failures) await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (failures - 1), 8000)));
     try {
-      const key = await unlock(form.password.value);
-      await keyStore('readwrite', (s) => s.put(key, 'site'));
+      const bits = await unlock(form.password.value);
+      await keyStore('readwrite', (s) => { s.delete('site'); return s.put(bits, 'raw'); });
       await ready;
-      location.reload();
+      const here = new URL(location.href);
+      here.searchParams.delete('lock'); // arriving from /?lock, the reload mustn't lock it again
+      location.replace(here);
     } catch {
       failures++;
       error.hidden = false;
