@@ -61,6 +61,11 @@ async function serve(request) {
   let path = decodeURIComponent(url.pathname);
   if (path.endsWith('/')) path += 'index.html';
   const res = await fetch(`/lock/${await sealedName(path)}`);
+  if (!res.ok && request.mode === 'navigate' && !path.split('/').pop().includes('.')) {
+    // a folder asked for without its closing slash (/generator): send the visitor to /generator/
+    const dir = await fetch(`/lock/${await sealedName(path + '/index.html')}`, { method: 'HEAD' });
+    if (dir.ok) return Response.redirect(url.pathname + '/' + url.search, 302);
+  }
   if (!res.ok) return request.mode === 'navigate' ? fetch(request) : new Response('Not found', { status: 404 });
 
   const sealed = new Uint8Array(await res.arrayBuffer());
