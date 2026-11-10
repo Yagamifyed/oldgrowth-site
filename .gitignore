@@ -1,1 +1,3 @@
 .DS_Store
+# conflict copies that a sync service leaves when the lock folder is rebuilt ("name (1)"): never publish them
+* (*)
